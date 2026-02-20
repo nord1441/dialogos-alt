@@ -4,7 +4,9 @@ import path from "path";
 import fs from "fs";
 import multer from "multer";
 import db from "./db";
-import { PROVIDER_MODELS, fetchOllamaModels, streamChat, ModelInfo } from "./providers";
+import { PROVIDER_MODELS, PROVIDER_DEFAULTS, fetchOllamaModels, streamChat, ModelInfo } from "./providers";
+
+const ALL_PROVIDERS = ["anthropic", "openai", "gemini", "ollama"];
 
 export function createApp(options?: { dataDir?: string }) {
   const app = express();
@@ -46,6 +48,25 @@ export function createApp(options?: { dataDir?: string }) {
     db.prepare("INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)").run(key, value);
   }
 
+  // Helper: delete setting from DB
+  function deleteSetting(key: string) {
+    db.prepare("DELETE FROM settings WHERE key = ?").run(key);
+  }
+
+  // Helper: resolve provider config (DB > env > default)
+  function resolveProviderConfig(provider: string): { apiKey?: string; baseUrl?: string } {
+    const envPrefix = provider.toUpperCase();
+    const apiKey =
+      getSetting(`${provider}_api_key`) ||
+      process.env[`${envPrefix}_API_KEY`] ||
+      undefined;
+    const baseUrl =
+      getSetting(`${provider}_base_url`) ||
+      process.env[`${envPrefix}_BASE_URL`] ||
+      undefined;
+    return { apiKey, baseUrl };
+  }
+
   // Get settings
   app.get("/api/settings", (_req: Request, res: Response) => {
     const systemPrompt = getSetting("system_prompt");
@@ -64,17 +85,22 @@ export function createApp(options?: { dataDir?: string }) {
     const activeModel = getSetting("active_model");
     const enabledModels = getSetting("enabled_models");
 
+    // Build providers config status
+    const providers: Record<string, { hasApiKey: boolean; baseUrl: string }> = {};
+    for (const p of ALL_PROVIDERS) {
+      const resolved = resolveProviderConfig(p);
+      providers[p] = {
+        hasApiKey: !!resolved.apiKey,
+        baseUrl: getSetting(`${p}_base_url`) || "",
+      };
+    }
+
     res.json({
       systemPrompt: systemPrompt || "You are a helpful assistant.",
       avatarUrl,
       activeModel: activeModel ? JSON.parse(activeModel) : { provider: "anthropic", model: "claude-opus-4-6" },
       enabledModels: enabledModels ? JSON.parse(enabledModels) : [],
-      providerKeys: {
-        anthropic: getSetting("anthropic_api_key") ? true : false,
-        openai: getSetting("openai_api_key") ? true : false,
-        gemini: getSetting("gemini_api_key") ? true : false,
-      },
-      ollamaBaseUrl: getSetting("ollama_base_url") || "http://localhost:11434",
+      providers,
     });
   });
 
@@ -120,35 +146,80 @@ export function createApp(options?: { dataDir?: string }) {
     res.json({ ok: true });
   });
 
-  // Save provider API key
-  app.post("/api/settings/provider-key", (req: Request, res: Response) => {
-    const { provider, apiKey } = req.body;
-    const validProviders = ["anthropic", "openai", "gemini"];
-    if (!validProviders.includes(provider)) {
+  // Save provider configuration (API key and/or base URL)
+  app.post("/api/settings/provider", (req: Request, res: Response) => {
+    const { provider, apiKey, baseUrl } = req.body;
+    if (!ALL_PROVIDERS.includes(provider)) {
       res.status(400).json({ error: "Invalid provider" });
       return;
     }
-    if (typeof apiKey !== "string") {
-      res.status(400).json({ error: "apiKey must be a string" });
-      return;
+
+    // API key
+    if (typeof apiKey === "string") {
+      if (apiKey.trim()) {
+        setSetting(`${provider}_api_key`, apiKey.trim());
+      } else {
+        deleteSetting(`${provider}_api_key`);
+      }
     }
-    if (apiKey.trim()) {
-      setSetting(`${provider}_api_key`, apiKey.trim());
-    } else {
-      db.prepare("DELETE FROM settings WHERE key = ?").run(`${provider}_api_key`);
+
+    // Base URL
+    if (typeof baseUrl === "string") {
+      if (baseUrl.trim()) {
+        setSetting(`${provider}_base_url`, baseUrl.trim());
+      } else {
+        deleteSetting(`${provider}_base_url`);
+      }
     }
+
     res.json({ ok: true });
   });
 
-  // Save Ollama base URL
-  app.post("/api/settings/ollama-url", (req: Request, res: Response) => {
-    const { baseUrl } = req.body;
-    if (typeof baseUrl !== "string") {
-      res.status(400).json({ error: "baseUrl must be a string" });
+  // Test provider connection
+  app.post("/api/settings/provider/test", async (req: Request, res: Response) => {
+    const { provider } = req.body;
+    if (!ALL_PROVIDERS.includes(provider)) {
+      res.status(400).json({ error: "Invalid provider" });
       return;
     }
-    setSetting("ollama_base_url", baseUrl.trim() || "http://localhost:11434");
-    res.json({ ok: true });
+
+    const config = resolveProviderConfig(provider);
+
+    try {
+      if (provider === "anthropic") {
+        const Anthropic = (await import("@anthropic-ai/sdk")).default;
+        const clientOpts: { apiKey?: string; baseURL?: string } = {};
+        if (config.apiKey) clientOpts.apiKey = config.apiKey;
+        if (config.baseUrl) clientOpts.baseURL = config.baseUrl;
+        const client = new Anthropic(clientOpts);
+        await client.models.list({ limit: 1 });
+        res.json({ ok: true, message: "connected" });
+      } else if (provider === "openai") {
+        const OpenAI = (await import("openai")).default;
+        const clientOpts: { apiKey?: string; baseURL?: string } = {};
+        if (config.apiKey) clientOpts.apiKey = config.apiKey;
+        if (config.baseUrl) clientOpts.baseURL = config.baseUrl;
+        const client = new OpenAI(clientOpts);
+        await client.models.list();
+        res.json({ ok: true, message: "connected" });
+      } else if (provider === "gemini") {
+        const { GoogleGenerativeAI } = await import("@google/generative-ai");
+        const genAI = new GoogleGenerativeAI(config.apiKey || "");
+        const requestOptions: { baseUrl?: string } = {};
+        if (config.baseUrl) requestOptions.baseUrl = config.baseUrl;
+        const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" }, requestOptions);
+        await model.countTokens("test");
+        res.json({ ok: true, message: "connected" });
+      } else if (provider === "ollama") {
+        const baseUrl = config.baseUrl || PROVIDER_DEFAULTS.ollama.baseUrl;
+        const tagRes = await fetch(`${baseUrl}/api/tags`);
+        if (!tagRes.ok) throw new Error(`HTTP ${tagRes.status}`);
+        res.json({ ok: true, message: "connected" });
+      }
+    } catch (err: any) {
+      const msg = err?.message || "connection failed";
+      res.json({ ok: false, message: msg });
+    }
   });
 
   // Save enabled models
@@ -175,7 +246,8 @@ export function createApp(options?: { dataDir?: string }) {
 
   // Get available models (including Ollama dynamic fetch)
   app.get("/api/models", async (_req: Request, res: Response) => {
-    const ollamaBaseUrl = getSetting("ollama_base_url") || "http://localhost:11434";
+    const ollamaConfig = resolveProviderConfig("ollama");
+    const ollamaBaseUrl = ollamaConfig.baseUrl || PROVIDER_DEFAULTS.ollama.baseUrl;
     const ollamaModels = await fetchOllamaModels(ollamaBaseUrl);
 
     const allModels: Record<string, ModelInfo[]> = {
@@ -229,21 +301,8 @@ export function createApp(options?: { dataDir?: string }) {
       ? JSON.parse(activeModelStr)
       : { provider: "anthropic", model: "claude-opus-4-6" };
 
-    // Get provider config
-    const providerConfig: { apiKey?: string; baseUrl?: string } = {};
-    if (activeModel.provider === "anthropic") {
-      providerConfig.apiKey =
-        getSetting("anthropic_api_key") || process.env.ANTHROPIC_API_KEY;
-    } else if (activeModel.provider === "openai") {
-      providerConfig.apiKey =
-        getSetting("openai_api_key") || process.env.OPENAI_API_KEY;
-    } else if (activeModel.provider === "gemini") {
-      providerConfig.apiKey =
-        getSetting("gemini_api_key") || process.env.GEMINI_API_KEY;
-    } else if (activeModel.provider === "ollama") {
-      providerConfig.baseUrl =
-        getSetting("ollama_base_url") || process.env.OLLAMA_BASE_URL || "http://localhost:11434";
-    }
+    // Get provider config (DB > env > undefined)
+    const providerConfig = resolveProviderConfig(activeModel.provider);
 
     // Set up SSE
     res.setHeader("Content-Type", "text/event-stream");

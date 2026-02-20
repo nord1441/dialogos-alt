@@ -72,29 +72,41 @@ npm test
 
 ## 環境変数
 
-プロジェクトルートに `.env` ファイルを作成し、以下の環境変数を設定します。API キーは環境変数のほか、設定画面からも登録可能です。
+プロジェクトルートに `.env` ファイルを作成し、以下の環境変数を設定します。API キーとエンドポイントは環境変数のほか、設定画面からも登録可能です (設定画面の値が優先)。
 
-| 変数名 | 説明 | デフォルト値 | 値の例 |
-|---|---|---|---|
-| `ANTHROPIC_API_KEY` | Anthropic API の認証キー | なし | `sk-ant-api03-xxxxxxxxxxxx` |
-| `OPENAI_API_KEY` | OpenAI API の認証キー | なし | `sk-xxxxxxxxxxxx` |
-| `GEMINI_API_KEY` | Gemini API の認証キー | なし | `AIzaxxxxxxxxxxxx` |
-| `OLLAMA_BASE_URL` | Ollama サーバーのベース URL | `http://localhost:11434` | `http://192.168.1.10:11434` |
-| `HOST` | サーバーのバインドアドレス | `0.0.0.0` | `127.0.0.1` |
-| `PORT` | サーバーのリッスンポート | `3000` | `8080` |
-| `DATA_DIR` | データ永続化ディレクトリのパス | `./data` | `/var/lib/dialogos/data` |
+各プロバイダーに対して **API キー** (認証) と **ベース URL** (エンドポイント) の両方を設定できます。プロキシや互換 API サーバーを使用する場合にベース URL を変更してください。
+
+| 変数名 | 説明 | デフォルト値 |
+|---|---|---|
+| `ANTHROPIC_API_KEY` | Anthropic API の認証キー | なし |
+| `ANTHROPIC_BASE_URL` | Anthropic API のエンドポイント | `https://api.anthropic.com` |
+| `OPENAI_API_KEY` | OpenAI API の認証キー | なし |
+| `OPENAI_BASE_URL` | OpenAI API のエンドポイント | `https://api.openai.com/v1` |
+| `GEMINI_API_KEY` | Gemini API の認証キー | なし |
+| `GEMINI_BASE_URL` | Gemini API のエンドポイント | `https://generativelanguage.googleapis.com` |
+| `OLLAMA_API_KEY` | Ollama の認証キー (通常は不要) | なし |
+| `OLLAMA_BASE_URL` | Ollama サーバーのエンドポイント | `http://localhost:11434` |
+| `HOST` | サーバーのバインドアドレス | `0.0.0.0` |
+| `PORT` | サーバーのリッスンポート | `3000` |
+| `DATA_DIR` | データ永続化ディレクトリのパス | `./data` |
 
 `.env` ファイルの例:
 
 ```env
 ANTHROPIC_API_KEY=sk-ant-api03-your-key-here
+ANTHROPIC_BASE_URL=https://api.anthropic.com
 OPENAI_API_KEY=sk-your-openai-key-here
+OPENAI_BASE_URL=https://api.openai.com/v1
 GEMINI_API_KEY=AIza-your-gemini-key-here
 OLLAMA_BASE_URL=http://localhost:11434
 HOST=0.0.0.0
 PORT=3000
 DATA_DIR=./data
 ```
+
+### 接続テスト
+
+設定画面の **providers** タブで各プロバイダーの API キーとエンドポイントを設定した後、**test** ボタンで接続を確認できます。接続成功時は「connected」、失敗時はエラーメッセージが表示されます。
 
 ---
 
@@ -443,9 +455,13 @@ WAL (Write-Ahead Logging) モードで動作する SQLite データベースに�
 | `active_model` | 現在選択中のプロバイダーとモデル (JSON) |
 | `enabled_models` | 有効化されたモデル一覧 (JSON 配列) |
 | `anthropic_api_key` | Anthropic API キー |
+| `anthropic_base_url` | Anthropic API エンドポイント |
 | `openai_api_key` | OpenAI API キー |
+| `openai_base_url` | OpenAI API エンドポイント |
 | `gemini_api_key` | Gemini API キー |
-| `ollama_base_url` | Ollama サーバーの URL |
+| `gemini_base_url` | Gemini API エンドポイント |
+| `ollama_api_key` | Ollama 認証キー |
+| `ollama_base_url` | Ollama サーバーのエンドポイント |
 
 #### `messages` テーブル
 

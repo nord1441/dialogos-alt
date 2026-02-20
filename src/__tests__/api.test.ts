@@ -18,6 +18,12 @@ vi.mock("../providers", () => {
       ],
       ollama: [],
     },
+    PROVIDER_DEFAULTS: {
+      anthropic: { baseUrl: "https://api.anthropic.com" },
+      openai: { baseUrl: "https://api.openai.com/v1" },
+      gemini: { baseUrl: "https://generativelanguage.googleapis.com" },
+      ollama: { baseUrl: "http://localhost:11434" },
+    },
     fetchOllamaModels: vi.fn().mockResolvedValue([]),
     streamChat: vi.fn().mockImplementation(function* () {
       yield "Hello ";
@@ -56,8 +62,11 @@ describe("API endpoints", () => {
       expect(res.body).toHaveProperty("avatarUrl");
       expect(res.body).toHaveProperty("activeModel");
       expect(res.body).toHaveProperty("enabledModels");
-      expect(res.body).toHaveProperty("providerKeys");
-      expect(res.body).toHaveProperty("ollamaBaseUrl");
+      expect(res.body).toHaveProperty("providers");
+      expect(res.body.providers).toHaveProperty("anthropic");
+      expect(res.body.providers).toHaveProperty("openai");
+      expect(res.body.providers).toHaveProperty("gemini");
+      expect(res.body.providers).toHaveProperty("ollama");
     });
 
     it("should return updated system prompt", async () => {
@@ -70,14 +79,19 @@ describe("API endpoints", () => {
       expect(res.body.systemPrompt).toBe("Custom prompt");
     });
 
-    it("should return provider key status", async () => {
+    it("should return provider key and url status", async () => {
       db.prepare("INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)").run(
         "anthropic_api_key",
         "test-key"
       );
+      db.prepare("INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)").run(
+        "openai_base_url",
+        "https://custom.openai.example.com/v1"
+      );
       const res = await request(app).get("/api/settings");
-      expect(res.body.providerKeys.anthropic).toBe(true);
-      expect(res.body.providerKeys.openai).toBe(false);
+      expect(res.body.providers.anthropic.hasApiKey).toBe(true);
+      expect(res.body.providers.openai.hasApiKey).toBe(false);
+      expect(res.body.providers.openai.baseUrl).toBe("https://custom.openai.example.com/v1");
     });
   });
 
@@ -111,10 +125,10 @@ describe("API endpoints", () => {
     });
   });
 
-  describe("POST /api/settings/provider-key", () => {
+  describe("POST /api/settings/provider", () => {
     it("should save a provider API key", async () => {
       const res = await request(app)
-        .post("/api/settings/provider-key")
+        .post("/api/settings/provider")
         .send({ provider: "openai", apiKey: "sk-test-key" });
       expect(res.status).toBe(200);
       expect(res.body.ok).toBe(true);
@@ -125,9 +139,45 @@ describe("API endpoints", () => {
       expect(row.value).toBe("sk-test-key");
     });
 
+    it("should save a provider base URL", async () => {
+      const res = await request(app)
+        .post("/api/settings/provider")
+        .send({ provider: "anthropic", baseUrl: "https://proxy.example.com" });
+      expect(res.status).toBe(200);
+
+      const row = db.prepare("SELECT value FROM settings WHERE key = ?").get("anthropic_base_url") as {
+        value: string;
+      };
+      expect(row.value).toBe("https://proxy.example.com");
+    });
+
+    it("should save both API key and base URL", async () => {
+      const res = await request(app)
+        .post("/api/settings/provider")
+        .send({ provider: "gemini", apiKey: "AIza-test", baseUrl: "https://custom.gemini.example.com" });
+      expect(res.status).toBe(200);
+
+      const keyRow = db.prepare("SELECT value FROM settings WHERE key = ?").get("gemini_api_key") as { value: string };
+      const urlRow = db.prepare("SELECT value FROM settings WHERE key = ?").get("gemini_base_url") as { value: string };
+      expect(keyRow.value).toBe("AIza-test");
+      expect(urlRow.value).toBe("https://custom.gemini.example.com");
+    });
+
+    it("should accept ollama provider", async () => {
+      const res = await request(app)
+        .post("/api/settings/provider")
+        .send({ provider: "ollama", baseUrl: "http://192.168.1.10:11434", apiKey: "custom-key" });
+      expect(res.status).toBe(200);
+
+      const keyRow = db.prepare("SELECT value FROM settings WHERE key = ?").get("ollama_api_key") as { value: string };
+      const urlRow = db.prepare("SELECT value FROM settings WHERE key = ?").get("ollama_base_url") as { value: string };
+      expect(keyRow.value).toBe("custom-key");
+      expect(urlRow.value).toBe("http://192.168.1.10:11434");
+    });
+
     it("should reject invalid provider", async () => {
       const res = await request(app)
-        .post("/api/settings/provider-key")
+        .post("/api/settings/provider")
         .send({ provider: "invalid", apiKey: "key" });
       expect(res.status).toBe(400);
     });
@@ -138,11 +188,25 @@ describe("API endpoints", () => {
         "old-key"
       );
       const res = await request(app)
-        .post("/api/settings/provider-key")
+        .post("/api/settings/provider")
         .send({ provider: "openai", apiKey: "" });
       expect(res.status).toBe(200);
 
       const row = db.prepare("SELECT value FROM settings WHERE key = ?").get("openai_api_key");
+      expect(row).toBeUndefined();
+    });
+
+    it("should delete base URL when empty string", async () => {
+      db.prepare("INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)").run(
+        "openai_base_url",
+        "https://old.example.com"
+      );
+      const res = await request(app)
+        .post("/api/settings/provider")
+        .send({ provider: "openai", baseUrl: "" });
+      expect(res.status).toBe(200);
+
+      const row = db.prepare("SELECT value FROM settings WHERE key = ?").get("openai_base_url");
       expect(row).toBeUndefined();
     });
   });

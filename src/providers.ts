@@ -22,6 +22,13 @@ export interface ChatOptions {
   providerConfig: ProviderConfig;
 }
 
+export const PROVIDER_DEFAULTS: Record<string, { baseUrl: string }> = {
+  anthropic: { baseUrl: "https://api.anthropic.com" },
+  openai: { baseUrl: "https://api.openai.com/v1" },
+  gemini: { baseUrl: "https://generativelanguage.googleapis.com" },
+  ollama: { baseUrl: "http://localhost:11434" },
+};
+
 export const PROVIDER_MODELS: Record<string, ModelInfo[]> = {
   anthropic: [
     { id: "claude-opus-4-6", name: "Claude Opus 4.6", provider: "anthropic" },
@@ -59,7 +66,10 @@ export async function fetchOllamaModels(baseUrl: string): Promise<ModelInfo[]> {
 }
 
 async function* streamAnthropic(options: ChatOptions): AsyncGenerator<string> {
-  const client = new Anthropic({ apiKey: options.providerConfig.apiKey });
+  const clientOpts: { apiKey?: string; baseURL?: string } = {};
+  if (options.providerConfig.apiKey) clientOpts.apiKey = options.providerConfig.apiKey;
+  if (options.providerConfig.baseUrl) clientOpts.baseURL = options.providerConfig.baseUrl;
+  const client = new Anthropic(clientOpts);
   const stream = client.messages.stream({
     model: options.model,
     max_tokens: options.maxTokens,
@@ -77,7 +87,10 @@ async function* streamAnthropic(options: ChatOptions): AsyncGenerator<string> {
 }
 
 async function* streamOpenAI(options: ChatOptions): AsyncGenerator<string> {
-  const client = new OpenAI({ apiKey: options.providerConfig.apiKey });
+  const clientOpts: { apiKey?: string; baseURL?: string } = {};
+  if (options.providerConfig.apiKey) clientOpts.apiKey = options.providerConfig.apiKey;
+  if (options.providerConfig.baseUrl) clientOpts.baseURL = options.providerConfig.baseUrl;
+  const client = new OpenAI(clientOpts);
   const stream = await client.chat.completions.create({
     model: options.model,
     max_tokens: options.maxTokens,
@@ -98,10 +111,15 @@ async function* streamOpenAI(options: ChatOptions): AsyncGenerator<string> {
 
 async function* streamGemini(options: ChatOptions): AsyncGenerator<string> {
   const genAI = new GoogleGenerativeAI(options.providerConfig.apiKey || "");
-  const model = genAI.getGenerativeModel({
-    model: options.model,
-    systemInstruction: options.systemPrompt,
-  });
+  const requestOptions: { baseUrl?: string } = {};
+  if (options.providerConfig.baseUrl) requestOptions.baseUrl = options.providerConfig.baseUrl;
+  const model = genAI.getGenerativeModel(
+    {
+      model: options.model,
+      systemInstruction: options.systemPrompt,
+    },
+    requestOptions,
+  );
 
   const history = options.messages.slice(0, -1).map((m) => ({
     role: m.role === "assistant" ? "model" : "user",
@@ -119,11 +137,12 @@ async function* streamGemini(options: ChatOptions): AsyncGenerator<string> {
 }
 
 async function* streamOllama(options: ChatOptions): AsyncGenerator<string> {
-  const baseUrl = options.providerConfig.baseUrl || "http://localhost:11434";
-  const client = new OpenAI({
-    apiKey: "ollama",
+  const baseUrl = options.providerConfig.baseUrl || PROVIDER_DEFAULTS.ollama.baseUrl;
+  const clientOpts: { apiKey: string; baseURL: string } = {
+    apiKey: options.providerConfig.apiKey || "ollama",
     baseURL: `${baseUrl}/v1`,
-  });
+  };
+  const client = new OpenAI(clientOpts);
   const stream = await client.chat.completions.create({
     model: options.model,
     messages: [

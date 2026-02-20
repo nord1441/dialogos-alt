@@ -79,18 +79,21 @@
     activeModel = data.activeModel || { provider: "anthropic", model: "claude-opus-4-6" };
     enabledModels = data.enabledModels || [];
 
-    // Show key status
-    updateKeyStatus("anthropic", data.providerKeys.anthropic);
-    updateKeyStatus("openai", data.providerKeys.openai);
-    updateKeyStatus("gemini", data.providerKeys.gemini);
-
-    document.getElementById("ollama-url").value = data.ollamaBaseUrl || "http://localhost:11434";
+    // Populate provider config status
+    if (data.providers) {
+      for (const [provider, info] of Object.entries(data.providers)) {
+        updateKeyStatus(provider, info.hasApiKey);
+        const urlInput = document.querySelector(`.provider-base-url[data-provider="${provider}"]`);
+        if (urlInput) urlInput.value = info.baseUrl || "";
+      }
+    }
 
     updateModelSelector();
   }
 
   function updateKeyStatus(provider, hasKey) {
     const el = document.getElementById(`${provider}-key-status`);
+    if (!el) return;
     if (hasKey) {
       el.textContent = "configured";
       el.className = "key-status configured";
@@ -181,46 +184,77 @@
     updateAvatar(null);
   });
 
-  // --- provider key save ---
-  document.querySelectorAll(".save-key-btn").forEach((btn) => {
+  // --- save provider config (api key + base url) ---
+  document.querySelectorAll(".save-provider-btn").forEach((btn) => {
     btn.addEventListener("click", async () => {
       const provider = btn.dataset.provider;
-      const input = document.getElementById(`${provider}-key`);
+      const keyInput = document.querySelector(`.provider-api-key[data-provider="${provider}"]`);
+      const urlInput = document.querySelector(`.provider-base-url[data-provider="${provider}"]`);
       const origText = btn.textContent;
       btn.textContent = "...";
-      await fetch("/api/settings/provider-key", {
+
+      const body = { provider };
+      if (keyInput.value) body.apiKey = keyInput.value;
+      body.baseUrl = urlInput.value;
+
+      await fetch("/api/settings/provider", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ provider, apiKey: input.value }),
+        body: JSON.stringify(body),
       });
+
+      if (keyInput.value) {
+        updateKeyStatus(provider, !!keyInput.value.trim());
+        keyInput.value = "";
+      }
+
       btn.textContent = "saved";
-      updateKeyStatus(provider, !!input.value.trim());
-      input.value = "";
       setTimeout(() => {
         btn.textContent = origText;
       }, 1200);
     });
   });
 
-  // --- ollama url save ---
-  document.getElementById("save-ollama-url-btn").addEventListener("click", async () => {
-    const btn = document.getElementById("save-ollama-url-btn");
-    const input = document.getElementById("ollama-url");
-    const origText = btn.textContent;
-    btn.textContent = "...";
-    await fetch("/api/settings/ollama-url", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ baseUrl: input.value }),
-    });
-    btn.textContent = "saved";
-    const statusEl = document.getElementById("ollama-url-status");
-    statusEl.textContent = "saved";
-    statusEl.className = "key-status configured";
-    setTimeout(() => {
+  // --- test provider connection ---
+  document.querySelectorAll(".test-provider-btn").forEach((btn) => {
+    btn.addEventListener("click", async () => {
+      const provider = btn.dataset.provider;
+      const resultEl = document.getElementById(`${provider}-test-result`);
+      const origText = btn.textContent;
+
+      btn.textContent = "...";
+      btn.disabled = true;
+      resultEl.textContent = "testing...";
+      resultEl.className = "test-result testing";
+
+      try {
+        const res = await fetch("/api/settings/provider/test", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ provider }),
+        });
+        const data = await res.json();
+
+        if (data.ok) {
+          resultEl.textContent = "connected";
+          resultEl.className = "test-result success";
+        } else {
+          resultEl.textContent = data.message || "failed";
+          resultEl.className = "test-result failure";
+        }
+      } catch {
+        resultEl.textContent = "request failed";
+        resultEl.className = "test-result failure";
+      }
+
       btn.textContent = origText;
-      statusEl.textContent = "";
-    }, 1200);
+      btn.disabled = false;
+
+      setTimeout(() => {
+        resultEl.textContent = "";
+        resultEl.className = "test-result";
+      }, 5000);
+    });
   });
 
   // --- models ---
@@ -255,7 +289,7 @@
       if (models.length === 0) {
         const empty = document.createElement("div");
         empty.className = "models-empty";
-        empty.textContent = provider === "ollama" ? "no models found - check ollama url" : "no models available";
+        empty.textContent = provider === "ollama" ? "no models found - check ollama endpoint" : "no models available";
         section.appendChild(empty);
       } else {
         for (const model of models) {

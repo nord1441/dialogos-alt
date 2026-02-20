@@ -108,38 +108,91 @@
 
           <!-- Providers Tab -->
           <div class="settings-tab-content" data-tab="providers">
-            <div class="setting-group">
-              <label>anthropic api key</label>
-              <div class="key-input-row">
-                <input type="password" id="anthropic-key" class="setting-input" placeholder="sk-ant-..." />
-                <button class="btn save-key-btn" data-provider="anthropic">save</button>
+
+            <div class="provider-section" data-provider="anthropic">
+              <div class="provider-header">
+                <span class="provider-name">anthropic</span>
+                <span class="provider-status" id="anthropic-status"></span>
               </div>
-              <div class="key-status" id="anthropic-key-status"></div>
-            </div>
-            <div class="setting-group">
-              <label>openai api key</label>
-              <div class="key-input-row">
-                <input type="password" id="openai-key" class="setting-input" placeholder="sk-..." />
-                <button class="btn save-key-btn" data-provider="openai">save</button>
+              <div class="setting-group">
+                <label>api key</label>
+                <input type="password" class="setting-input provider-api-key" data-provider="anthropic" placeholder="sk-ant-..." />
+                <div class="key-status" id="anthropic-key-status"></div>
               </div>
-              <div class="key-status" id="openai-key-status"></div>
-            </div>
-            <div class="setting-group">
-              <label>gemini api key</label>
-              <div class="key-input-row">
-                <input type="password" id="gemini-key" class="setting-input" placeholder="AIza..." />
-                <button class="btn save-key-btn" data-provider="gemini">save</button>
+              <div class="setting-group">
+                <label>api endpoint</label>
+                <input type="text" class="setting-input provider-base-url" data-provider="anthropic" placeholder="https://api.anthropic.com" />
               </div>
-              <div class="key-status" id="gemini-key-status"></div>
-            </div>
-            <div class="setting-group">
-              <label>ollama base url</label>
-              <div class="key-input-row">
-                <input type="text" id="ollama-url" class="setting-input" placeholder="http://localhost:11434" />
-                <button class="btn" id="save-ollama-url-btn">save</button>
+              <div class="provider-actions">
+                <button class="btn save-provider-btn" data-provider="anthropic">save</button>
+                <button class="btn test-provider-btn" data-provider="anthropic">test</button>
+                <span class="test-result" id="anthropic-test-result"></span>
               </div>
-              <div class="key-status" id="ollama-url-status"></div>
             </div>
+
+            <div class="provider-section" data-provider="openai">
+              <div class="provider-header">
+                <span class="provider-name">openai</span>
+                <span class="provider-status" id="openai-status"></span>
+              </div>
+              <div class="setting-group">
+                <label>api key</label>
+                <input type="password" class="setting-input provider-api-key" data-provider="openai" placeholder="sk-..." />
+                <div class="key-status" id="openai-key-status"></div>
+              </div>
+              <div class="setting-group">
+                <label>api endpoint</label>
+                <input type="text" class="setting-input provider-base-url" data-provider="openai" placeholder="https://api.openai.com/v1" />
+              </div>
+              <div class="provider-actions">
+                <button class="btn save-provider-btn" data-provider="openai">save</button>
+                <button class="btn test-provider-btn" data-provider="openai">test</button>
+                <span class="test-result" id="openai-test-result"></span>
+              </div>
+            </div>
+
+            <div class="provider-section" data-provider="gemini">
+              <div class="provider-header">
+                <span class="provider-name">gemini</span>
+                <span class="provider-status" id="gemini-status"></span>
+              </div>
+              <div class="setting-group">
+                <label>api key</label>
+                <input type="password" class="setting-input provider-api-key" data-provider="gemini" placeholder="AIza..." />
+                <div class="key-status" id="gemini-key-status"></div>
+              </div>
+              <div class="setting-group">
+                <label>api endpoint</label>
+                <input type="text" class="setting-input provider-base-url" data-provider="gemini" placeholder="https://generativelanguage.googleapis.com" />
+              </div>
+              <div class="provider-actions">
+                <button class="btn save-provider-btn" data-provider="gemini">save</button>
+                <button class="btn test-provider-btn" data-provider="gemini">test</button>
+                <span class="test-result" id="gemini-test-result"></span>
+              </div>
+            </div>
+
+            <div class="provider-section" data-provider="ollama">
+              <div class="provider-header">
+                <span class="provider-name">ollama</span>
+                <span class="provider-status" id="ollama-status"></span>
+              </div>
+              <div class="setting-group">
+                <label>api key <span class="label-hint">(optional)</span></label>
+                <input type="password" class="setting-input provider-api-key" data-provider="ollama" placeholder="(not required for local)" />
+                <div class="key-status" id="ollama-key-status"></div>
+              </div>
+              <div class="setting-group">
+                <label>api endpoint</label>
+                <input type="text" class="setting-input provider-base-url" data-provider="ollama" placeholder="http://localhost:11434" />
+              </div>
+              <div class="provider-actions">
+                <button class="btn save-provider-btn" data-provider="ollama">save</button>
+                <button class="btn test-provider-btn" data-provider="ollama">test</button>
+                <span class="test-result" id="ollama-test-result"></span>
+              </div>
+            </div>
+
           </div>
 
           <!-- Models Tab -->

@@ -513,10 +513,62 @@ body {
   object-fit: cover;
 }
 
-/* --- provider key input --- */
+/* --- provider sections --- */
+
+.provider-section {
+  padding: 16px;
+  border: 1px solid var(--border);
+  border-radius: 2px;
+  margin-bottom: 16px;
+}
+
+.provider-section:last-child {
+  margin-bottom: 0;
+}
+
+.provider-section .setting-group {
+  margin-bottom: 12px;
+}
+
+.provider-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--border);
+}
+
+.provider-name {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: lowercase;
+  color: var(--fg);
+}
+
+.provider-status {
+  font-size: 9px;
+  letter-spacing: 0.06em;
+}
+
+.provider-actions {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.label-hint {
+  font-weight: 400;
+  opacity: 0.5;
+  text-transform: none;
+  letter-spacing: 0;
+}
+
+/* --- provider input --- */
 
 .setting-input {
-  flex: 1;
+  width: 100%;
   padding: 8px 12px;
   font-family: "Doto", sans-serif;
   font-size: 12px;
@@ -533,12 +585,6 @@ body {
   border-color: var(--accent);
 }
 
-.key-input-row {
-  display: flex;
-  gap: 8px;
-  align-items: center;
-}
-
 .key-status {
   font-size: 9px;
   letter-spacing: 0.08em;
@@ -550,6 +596,26 @@ body {
 .key-status.configured {
   color: #22c55e;
   opacity: 1;
+}
+
+/* --- connection test result --- */
+
+.test-result {
+  font-size: 10px;
+  letter-spacing: 0.06em;
+  font-weight: 600;
+}
+
+.test-result.testing {
+  color: var(--fg-secondary);
+}
+
+.test-result.success {
+  color: #22c55e;
+}
+
+.test-result.failure {
+  color: var(--accent);
 }
 
 /* --- models list --- */
