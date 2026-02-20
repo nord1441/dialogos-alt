@@ -56,6 +56,7 @@
 
     <footer id="footer">
       <form id="chat-form">
+        <select id="model-selector" title="Select model"></select>
         <input type="text" id="chat-input" placeholder="message..." autocomplete="off" />
         <button type="submit" id="send-btn">
           <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
@@ -78,20 +79,75 @@
           </button>
         </div>
         <div class="modal-body">
-          <div class="setting-group">
-            <label for="system-prompt">system prompt</label>
-            <textarea id="system-prompt" rows="4" placeholder="You are a helpful assistant."></textarea>
-            <button id="save-prompt-btn" class="btn">save</button>
+          <!-- Tabs -->
+          <div class="settings-tabs">
+            <button class="settings-tab active" data-tab="general">general</button>
+            <button class="settings-tab" data-tab="providers">providers</button>
+            <button class="settings-tab" data-tab="models">models</button>
           </div>
-          <div class="setting-group">
-            <label>avatar</label>
-            <div id="avatar-preview-container">
-              <div id="avatar-preview"></div>
+
+          <!-- General Tab -->
+          <div class="settings-tab-content active" data-tab="general">
+            <div class="setting-group">
+              <label for="system-prompt">system prompt</label>
+              <textarea id="system-prompt" rows="4" placeholder="You are a helpful assistant."></textarea>
+              <button id="save-prompt-btn" class="btn">save</button>
             </div>
-            <div class="avatar-actions">
-              <label for="avatar-upload" class="btn">upload</label>
-              <input type="file" id="avatar-upload" accept="image/*,video/mp4,video/webm" hidden />
-              <button id="remove-avatar-btn" class="btn btn-danger">remove</button>
+            <div class="setting-group">
+              <label>avatar</label>
+              <div id="avatar-preview-container">
+                <div id="avatar-preview"></div>
+              </div>
+              <div class="avatar-actions">
+                <label for="avatar-upload" class="btn">upload</label>
+                <input type="file" id="avatar-upload" accept="image/*,video/mp4,video/webm" hidden />
+                <button id="remove-avatar-btn" class="btn btn-danger">remove</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Providers Tab -->
+          <div class="settings-tab-content" data-tab="providers">
+            <div class="setting-group">
+              <label>anthropic api key</label>
+              <div class="key-input-row">
+                <input type="password" id="anthropic-key" class="setting-input" placeholder="sk-ant-..." />
+                <button class="btn save-key-btn" data-provider="anthropic">save</button>
+              </div>
+              <div class="key-status" id="anthropic-key-status"></div>
+            </div>
+            <div class="setting-group">
+              <label>openai api key</label>
+              <div class="key-input-row">
+                <input type="password" id="openai-key" class="setting-input" placeholder="sk-..." />
+                <button class="btn save-key-btn" data-provider="openai">save</button>
+              </div>
+              <div class="key-status" id="openai-key-status"></div>
+            </div>
+            <div class="setting-group">
+              <label>gemini api key</label>
+              <div class="key-input-row">
+                <input type="password" id="gemini-key" class="setting-input" placeholder="AIza..." />
+                <button class="btn save-key-btn" data-provider="gemini">save</button>
+              </div>
+              <div class="key-status" id="gemini-key-status"></div>
+            </div>
+            <div class="setting-group">
+              <label>ollama base url</label>
+              <div class="key-input-row">
+                <input type="text" id="ollama-url" class="setting-input" placeholder="http://localhost:11434" />
+                <button class="btn" id="save-ollama-url-btn">save</button>
+              </div>
+              <div class="key-status" id="ollama-url-status"></div>
+            </div>
+          </div>
+
+          <!-- Models Tab -->
+          <div class="settings-tab-content" data-tab="models">
+            <div class="setting-group">
+              <div class="models-description">select models to enable in the chat selector</div>
+              <div id="models-list"></div>
+              <button class="btn" id="save-models-btn">save</button>
             </div>
           </div>
         </div>

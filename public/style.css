@@ -253,6 +253,30 @@ body {
   align-items: center;
 }
 
+#model-selector {
+  padding: 8px 10px;
+  font-family: "Doto", sans-serif;
+  font-size: 11px;
+  font-weight: 500;
+  background: var(--input-bg);
+  color: var(--fg);
+  border: 1px solid var(--border);
+  border-radius: 2px;
+  outline: none;
+  cursor: pointer;
+  max-width: 200px;
+  transition: border-color 0.15s;
+}
+
+#model-selector:focus {
+  border-color: var(--accent);
+}
+
+#model-selector option {
+  background: var(--modal-bg);
+  color: var(--fg);
+}
+
 #chat-input {
   flex: 1;
   padding: 10px 14px;
@@ -323,7 +347,7 @@ body {
   border: 1px solid var(--border);
   border-radius: 2px;
   width: 90%;
-  max-width: 480px;
+  max-width: 560px;
   max-height: 80vh;
   overflow-y: auto;
 }
@@ -343,6 +367,57 @@ body {
 .modal-body {
   padding: 20px;
 }
+
+/* --- settings tabs --- */
+
+.settings-tabs {
+  display: flex;
+  gap: 0;
+  margin-bottom: 20px;
+  border: 1px solid var(--border);
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+.settings-tab {
+  flex: 1;
+  padding: 8px 12px;
+  font-family: "Doto", sans-serif;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: lowercase;
+  background: transparent;
+  color: var(--fg-secondary);
+  border: none;
+  border-right: 1px solid var(--border);
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.settings-tab:last-child {
+  border-right: none;
+}
+
+.settings-tab:hover {
+  color: var(--fg);
+  background: var(--bg-secondary);
+}
+
+.settings-tab.active {
+  color: var(--accent);
+  background: var(--bg-secondary);
+}
+
+.settings-tab-content {
+  display: none;
+}
+
+.settings-tab-content.active {
+  display: block;
+}
+
+/* --- setting groups --- */
 
 .setting-group {
   margin-bottom: 24px;
@@ -438,6 +513,130 @@ body {
   object-fit: cover;
 }
 
+/* --- provider key input --- */
+
+.setting-input {
+  flex: 1;
+  padding: 8px 12px;
+  font-family: "Doto", sans-serif;
+  font-size: 12px;
+  font-weight: 400;
+  background: var(--input-bg);
+  color: var(--fg);
+  border: 1px solid var(--border);
+  border-radius: 2px;
+  outline: none;
+  transition: border-color 0.15s;
+}
+
+.setting-input:focus {
+  border-color: var(--accent);
+}
+
+.key-input-row {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.key-status {
+  font-size: 9px;
+  letter-spacing: 0.08em;
+  color: var(--fg-secondary);
+  margin-top: 4px;
+  opacity: 0.6;
+}
+
+.key-status.configured {
+  color: #22c55e;
+  opacity: 1;
+}
+
+/* --- models list --- */
+
+.models-description {
+  font-size: 10px;
+  color: var(--fg-secondary);
+  margin-bottom: 16px;
+  letter-spacing: 0.05em;
+}
+
+.models-provider-section {
+  margin-bottom: 16px;
+}
+
+.models-provider-section:last-child {
+  margin-bottom: 12px;
+}
+
+.models-provider-header {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--fg-secondary);
+  margin-bottom: 8px;
+  padding-bottom: 4px;
+  border-bottom: 1px solid var(--border);
+}
+
+.models-empty {
+  font-size: 10px;
+  color: var(--fg-secondary);
+  opacity: 0.5;
+  padding: 4px 0;
+}
+
+.model-checkbox-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 0;
+  cursor: pointer;
+  font-size: 12px;
+  color: var(--fg);
+  letter-spacing: 0.02em;
+}
+
+.model-checkbox-label:hover {
+  color: var(--accent);
+}
+
+.model-checkbox {
+  appearance: none;
+  -webkit-appearance: none;
+  width: 14px;
+  height: 14px;
+  border: 1px solid var(--border);
+  border-radius: 2px;
+  background: var(--input-bg);
+  cursor: pointer;
+  position: relative;
+  flex-shrink: 0;
+  transition: all 0.15s;
+}
+
+.model-checkbox:checked {
+  border-color: var(--accent);
+  background: var(--accent);
+}
+
+.model-checkbox:checked::after {
+  content: "";
+  position: absolute;
+  left: 4px;
+  top: 1px;
+  width: 4px;
+  height: 8px;
+  border: solid var(--bg);
+  border-width: 0 1.5px 1.5px 0;
+  transform: rotate(45deg);
+}
+
+.model-checkbox:hover {
+  border-color: var(--accent);
+}
+
 /* --- scrollbar --- */
 
 ::-webkit-scrollbar {
@@ -474,6 +673,10 @@ body {
 
   #messages-panel {
     padding: 16px;
+  }
+
+  #model-selector {
+    max-width: 120px;
   }
 }
 

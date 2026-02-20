@@ -3,27 +3,32 @@ import request from "supertest";
 import express from "express";
 import db from "../db";
 
-// Mock Anthropic SDK to avoid real API calls
-vi.mock("@anthropic-ai/sdk", () => {
+// Mock providers module
+vi.mock("../providers", () => {
   return {
-    default: class MockAnthropic {
-      messages = {
-        stream: () => {
-          const events = [
-            { type: "content_block_delta", delta: { type: "text_delta", text: "Hello " } },
-            { type: "content_block_delta", delta: { type: "text_delta", text: "world" } },
-          ];
-          return {
-            [Symbol.asyncIterator]: async function* () {
-              for (const event of events) {
-                yield event;
-              }
-            },
-          };
-        },
-      };
+    PROVIDER_MODELS: {
+      anthropic: [
+        { id: "claude-opus-4-6", name: "Claude Opus 4.6", provider: "anthropic" },
+      ],
+      openai: [
+        { id: "gpt-4o", name: "GPT-4o", provider: "openai" },
+      ],
+      gemini: [
+        { id: "gemini-2.0-flash", name: "Gemini 2.0 Flash", provider: "gemini" },
+      ],
+      ollama: [],
     },
+    fetchOllamaModels: vi.fn().mockResolvedValue([]),
+    streamChat: vi.fn().mockImplementation(function* () {
+      yield "Hello ";
+      yield "world";
+    }),
   };
+});
+
+// Mock Anthropic SDK (still needed for import)
+vi.mock("@anthropic-ai/sdk", () => {
+  return { default: class MockAnthropic {} };
 });
 
 // Import after mock
@@ -35,6 +40,7 @@ describe("API endpoints", () => {
   beforeEach(() => {
     // Clean database state
     db.prepare("DELETE FROM messages").run();
+    db.prepare("DELETE FROM settings").run();
     db.prepare("INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)").run(
       "system_prompt",
       "You are a helpful assistant."
@@ -48,6 +54,10 @@ describe("API endpoints", () => {
       expect(res.status).toBe(200);
       expect(res.body.systemPrompt).toBe("You are a helpful assistant.");
       expect(res.body).toHaveProperty("avatarUrl");
+      expect(res.body).toHaveProperty("activeModel");
+      expect(res.body).toHaveProperty("enabledModels");
+      expect(res.body).toHaveProperty("providerKeys");
+      expect(res.body).toHaveProperty("ollamaBaseUrl");
     });
 
     it("should return updated system prompt", async () => {
@@ -58,6 +68,16 @@ describe("API endpoints", () => {
       const res = await request(app).get("/api/settings");
       expect(res.status).toBe(200);
       expect(res.body.systemPrompt).toBe("Custom prompt");
+    });
+
+    it("should return provider key status", async () => {
+      db.prepare("INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)").run(
+        "anthropic_api_key",
+        "test-key"
+      );
+      const res = await request(app).get("/api/settings");
+      expect(res.body.providerKeys.anthropic).toBe(true);
+      expect(res.body.providerKeys.openai).toBe(false);
     });
   });
 
@@ -88,6 +108,102 @@ describe("API endpoints", () => {
         .post("/api/settings/system-prompt")
         .send({});
       expect(res.status).toBe(400);
+    });
+  });
+
+  describe("POST /api/settings/provider-key", () => {
+    it("should save a provider API key", async () => {
+      const res = await request(app)
+        .post("/api/settings/provider-key")
+        .send({ provider: "openai", apiKey: "sk-test-key" });
+      expect(res.status).toBe(200);
+      expect(res.body.ok).toBe(true);
+
+      const row = db.prepare("SELECT value FROM settings WHERE key = ?").get("openai_api_key") as {
+        value: string;
+      };
+      expect(row.value).toBe("sk-test-key");
+    });
+
+    it("should reject invalid provider", async () => {
+      const res = await request(app)
+        .post("/api/settings/provider-key")
+        .send({ provider: "invalid", apiKey: "key" });
+      expect(res.status).toBe(400);
+    });
+
+    it("should delete key when empty string", async () => {
+      db.prepare("INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)").run(
+        "openai_api_key",
+        "old-key"
+      );
+      const res = await request(app)
+        .post("/api/settings/provider-key")
+        .send({ provider: "openai", apiKey: "" });
+      expect(res.status).toBe(200);
+
+      const row = db.prepare("SELECT value FROM settings WHERE key = ?").get("openai_api_key");
+      expect(row).toBeUndefined();
+    });
+  });
+
+  describe("POST /api/settings/active-model", () => {
+    it("should save active model", async () => {
+      const res = await request(app)
+        .post("/api/settings/active-model")
+        .send({ provider: "openai", model: "gpt-4o" });
+      expect(res.status).toBe(200);
+      expect(res.body.ok).toBe(true);
+
+      const row = db.prepare("SELECT value FROM settings WHERE key = ?").get("active_model") as {
+        value: string;
+      };
+      expect(JSON.parse(row.value)).toEqual({ provider: "openai", model: "gpt-4o" });
+    });
+
+    it("should reject missing fields", async () => {
+      const res = await request(app)
+        .post("/api/settings/active-model")
+        .send({ provider: "openai" });
+      expect(res.status).toBe(400);
+    });
+  });
+
+  describe("POST /api/settings/enabled-models", () => {
+    it("should save enabled models", async () => {
+      const models = [
+        { provider: "anthropic", model: "claude-opus-4-6" },
+        { provider: "openai", model: "gpt-4o" },
+      ];
+      const res = await request(app)
+        .post("/api/settings/enabled-models")
+        .send({ models });
+      expect(res.status).toBe(200);
+      expect(res.body.ok).toBe(true);
+
+      const row = db.prepare("SELECT value FROM settings WHERE key = ?").get("enabled_models") as {
+        value: string;
+      };
+      expect(JSON.parse(row.value)).toEqual(models);
+    });
+
+    it("should reject non-array", async () => {
+      const res = await request(app)
+        .post("/api/settings/enabled-models")
+        .send({ models: "not-array" });
+      expect(res.status).toBe(400);
+    });
+  });
+
+  describe("GET /api/models", () => {
+    it("should return available models", async () => {
+      const res = await request(app).get("/api/models");
+      expect(res.status).toBe(200);
+      expect(res.body).toHaveProperty("anthropic");
+      expect(res.body).toHaveProperty("openai");
+      expect(res.body).toHaveProperty("gemini");
+      expect(res.body).toHaveProperty("ollama");
+      expect(res.body.anthropic).toHaveLength(1);
     });
   });
 

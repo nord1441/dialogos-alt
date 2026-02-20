@@ -15,8 +15,12 @@
   const avatarFrame = document.getElementById("avatar-frame");
   const themeToggle = document.getElementById("theme-toggle");
   const clearBtn = document.getElementById("clear-btn");
+  const modelSelector = document.getElementById("model-selector");
 
   let isStreaming = false;
+  let allModels = {};
+  let enabledModels = [];
+  let activeModel = { provider: "anthropic", model: "claude-opus-4-6" };
 
   // --- theme ---
   function getTheme() {
@@ -32,6 +36,20 @@
 
   themeToggle.addEventListener("click", () => {
     setTheme(getTheme() === "dark" ? "light" : "dark");
+  });
+
+  // --- settings tabs ---
+  document.querySelectorAll(".settings-tab").forEach((tab) => {
+    tab.addEventListener("click", () => {
+      document.querySelectorAll(".settings-tab").forEach((t) => t.classList.remove("active"));
+      document.querySelectorAll(".settings-tab-content").forEach((c) => c.classList.remove("active"));
+      tab.classList.add("active");
+      document.querySelector(`.settings-tab-content[data-tab="${tab.dataset.tab}"]`).classList.add("active");
+
+      if (tab.dataset.tab === "models") {
+        loadModels();
+      }
+    });
   });
 
   // --- settings modal ---
@@ -57,6 +75,29 @@
 
     systemPromptEl.value = data.systemPrompt || "";
     updateAvatar(data.avatarUrl);
+
+    activeModel = data.activeModel || { provider: "anthropic", model: "claude-opus-4-6" };
+    enabledModels = data.enabledModels || [];
+
+    // Show key status
+    updateKeyStatus("anthropic", data.providerKeys.anthropic);
+    updateKeyStatus("openai", data.providerKeys.openai);
+    updateKeyStatus("gemini", data.providerKeys.gemini);
+
+    document.getElementById("ollama-url").value = data.ollamaBaseUrl || "http://localhost:11434";
+
+    updateModelSelector();
+  }
+
+  function updateKeyStatus(provider, hasKey) {
+    const el = document.getElementById(`${provider}-key-status`);
+    if (hasKey) {
+      el.textContent = "configured";
+      el.className = "key-status configured";
+    } else {
+      el.textContent = "not set";
+      el.className = "key-status";
+    }
   }
 
   function updateAvatar(url) {
@@ -138,6 +179,169 @@
   removeAvatarBtn.addEventListener("click", async () => {
     await fetch("/api/settings/avatar", { method: "DELETE" });
     updateAvatar(null);
+  });
+
+  // --- provider key save ---
+  document.querySelectorAll(".save-key-btn").forEach((btn) => {
+    btn.addEventListener("click", async () => {
+      const provider = btn.dataset.provider;
+      const input = document.getElementById(`${provider}-key`);
+      const origText = btn.textContent;
+      btn.textContent = "...";
+      await fetch("/api/settings/provider-key", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ provider, apiKey: input.value }),
+      });
+      btn.textContent = "saved";
+      updateKeyStatus(provider, !!input.value.trim());
+      input.value = "";
+      setTimeout(() => {
+        btn.textContent = origText;
+      }, 1200);
+    });
+  });
+
+  // --- ollama url save ---
+  document.getElementById("save-ollama-url-btn").addEventListener("click", async () => {
+    const btn = document.getElementById("save-ollama-url-btn");
+    const input = document.getElementById("ollama-url");
+    const origText = btn.textContent;
+    btn.textContent = "...";
+    await fetch("/api/settings/ollama-url", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ baseUrl: input.value }),
+    });
+    btn.textContent = "saved";
+    const statusEl = document.getElementById("ollama-url-status");
+    statusEl.textContent = "saved";
+    statusEl.className = "key-status configured";
+    setTimeout(() => {
+      btn.textContent = origText;
+      statusEl.textContent = "";
+    }, 1200);
+  });
+
+  // --- models ---
+  async function loadModels() {
+    const res = await fetch("/api/models");
+    allModels = await res.json();
+    renderModelsList();
+  }
+
+  function renderModelsList() {
+    const container = document.getElementById("models-list");
+    container.innerHTML = "";
+
+    const providerNames = {
+      anthropic: "Anthropic",
+      openai: "OpenAI",
+      gemini: "Gemini",
+      ollama: "Ollama",
+    };
+
+    for (const [provider, models] of Object.entries(allModels)) {
+      if (!models.length && provider !== "ollama") continue;
+
+      const section = document.createElement("div");
+      section.className = "models-provider-section";
+
+      const header = document.createElement("div");
+      header.className = "models-provider-header";
+      header.textContent = providerNames[provider] || provider;
+      section.appendChild(header);
+
+      if (models.length === 0) {
+        const empty = document.createElement("div");
+        empty.className = "models-empty";
+        empty.textContent = provider === "ollama" ? "no models found - check ollama url" : "no models available";
+        section.appendChild(empty);
+      } else {
+        for (const model of models) {
+          const label = document.createElement("label");
+          label.className = "model-checkbox-label";
+
+          const checkbox = document.createElement("input");
+          checkbox.type = "checkbox";
+          checkbox.className = "model-checkbox";
+          checkbox.dataset.provider = provider;
+          checkbox.dataset.model = model.id;
+          checkbox.checked = enabledModels.some(
+            (m) => m.provider === provider && m.model === model.id
+          );
+
+          const span = document.createElement("span");
+          span.textContent = model.name;
+
+          label.appendChild(checkbox);
+          label.appendChild(span);
+          section.appendChild(label);
+        }
+      }
+
+      container.appendChild(section);
+    }
+  }
+
+  // --- save models ---
+  document.getElementById("save-models-btn").addEventListener("click", async () => {
+    const btn = document.getElementById("save-models-btn");
+    const checkboxes = document.querySelectorAll(".model-checkbox:checked");
+    const models = [];
+    checkboxes.forEach((cb) => {
+      models.push({ provider: cb.dataset.provider, model: cb.dataset.model });
+    });
+
+    const origText = btn.textContent;
+    btn.textContent = "...";
+    await fetch("/api/settings/enabled-models", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ models }),
+    });
+    enabledModels = models;
+    updateModelSelector();
+    btn.textContent = "saved";
+    setTimeout(() => {
+      btn.textContent = origText;
+    }, 1200);
+  });
+
+  // --- model selector ---
+  function updateModelSelector() {
+    modelSelector.innerHTML = "";
+
+    if (enabledModels.length === 0) {
+      const opt = document.createElement("option");
+      opt.value = "";
+      opt.textContent = "no models enabled";
+      modelSelector.appendChild(opt);
+      return;
+    }
+
+    for (const m of enabledModels) {
+      const opt = document.createElement("option");
+      opt.value = `${m.provider}:${m.model}`;
+      opt.textContent = `${m.model}`;
+      if (m.provider === activeModel.provider && m.model === activeModel.model) {
+        opt.selected = true;
+      }
+      modelSelector.appendChild(opt);
+    }
+  }
+
+  modelSelector.addEventListener("change", async () => {
+    const val = modelSelector.value;
+    if (!val) return;
+    const [provider, ...rest] = val.split(":");
+    const model = rest.join(":");
+    activeModel = { provider, model };
+    await fetch("/api/settings/active-model", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(activeModel),
+    });
   });
 
   // --- messages ---
