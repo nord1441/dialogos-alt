@@ -1,0 +1,36 @@
+{
+  "name": "dialogos-alt",
+  "version": "1.0.0",
+  "description": "",
+  "main": "dist/server.js",
+  "scripts": {
+    "test": "vitest run",
+    "build": "vitest run && tsc",
+    "start": "node dist/server.js",
+    "dev": "tsc && node dist/server.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "http://local_proxy@127.0.0.1:52443/git/nord1441/dialogos-alt"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.78.0",
+    "@types/better-sqlite3": "^7.6.13",
+    "@types/express": "^5.0.6",
+    "@types/multer": "^2.0.0",
+    "@types/node": "^25.3.0",
+    "better-sqlite3": "^12.6.2",
+    "dotenv": "^17.3.1",
+    "express": "^5.2.1",
+    "multer": "^2.0.2",
+    "typescript": "^5.9.3"
+  },
+  "devDependencies": {
+    "@types/supertest": "^6.0.3",
+    "supertest": "^7.2.2",
+    "vitest": "^4.0.18"
+  }
+}
