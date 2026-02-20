@@ -1,0 +1,19 @@
+services:
+  dialogos:
+    build: .
+    ports:
+      - "3000:3000"
+    environment:
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY:-}
+      - OPENAI_API_KEY=${OPENAI_API_KEY:-}
+      - GEMINI_API_KEY=${GEMINI_API_KEY:-}
+      - OLLAMA_BASE_URL=${OLLAMA_BASE_URL:-http://host.docker.internal:11434}
+      - HOST=0.0.0.0
+      - PORT=3000
+      - DATA_DIR=/app/data
+    volumes:
+      - dialogos-data:/app/data
+    restart: unless-stopped
+
+volumes:
+  dialogos-data:
