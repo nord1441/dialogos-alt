@@ -38,6 +38,38 @@
     setTheme(getTheme() === "dark" ? "light" : "dark");
   });
 
+  // --- font ---
+  function getFont() {
+    return localStorage.getItem("font") || "doto";
+  }
+
+  function setFont(font) {
+    if (font === "doto") {
+      document.documentElement.removeAttribute("data-font");
+    } else {
+      document.documentElement.setAttribute("data-font", font);
+    }
+    localStorage.setItem("font", font);
+
+    document.querySelectorAll(".font-option").forEach((btn) => {
+      btn.classList.toggle("active", btn.dataset.font === font);
+    });
+  }
+
+  setFont(getFont());
+
+  document.querySelectorAll(".font-option").forEach((btn) => {
+    btn.addEventListener("click", async () => {
+      const font = btn.dataset.font;
+      setFont(font);
+      await fetch("/api/settings/font", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ font }),
+      });
+    });
+  });
+
   // --- settings tabs ---
   document.querySelectorAll(".settings-tab").forEach((tab) => {
     tab.addEventListener("click", () => {
@@ -78,6 +110,11 @@
 
     activeModel = data.activeModel || { provider: "anthropic", model: "claude-opus-4-6" };
     enabledModels = data.enabledModels || [];
+
+    // Apply font setting from server
+    if (data.font) {
+      setFont(data.font);
+    }
 
     // Populate provider config status
     if (data.providers) {

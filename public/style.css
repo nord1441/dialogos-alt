@@ -18,6 +18,7 @@
   --input-bg: #f5f5f5;
   --modal-bg: #ffffff;
   --shadow: rgba(0, 0, 0, 0.08);
+  --font: "Doto", sans-serif;
 }
 
 [data-theme="dark"] {
@@ -34,13 +35,17 @@
   --shadow: rgba(0, 0, 0, 0.3);
 }
 
+[data-font="helvetica"] {
+  --font: "Helvetica Ultra Compressed", "Helvetica Neue Condensed", "Helvetica Neue", "Helvetica", "Arial Narrow", sans-serif;
+}
+
 html, body {
   height: 100%;
   overflow: hidden;
 }
 
 body {
-  font-family: "Doto", sans-serif;
+  font-family: var(--font);
   font-optical-sizing: auto;
   font-weight: 400;
   background: var(--bg);
@@ -255,7 +260,7 @@ body {
 
 #model-selector {
   padding: 8px 10px;
-  font-family: "Doto", sans-serif;
+  font-family: var(--font);
   font-size: 11px;
   font-weight: 500;
   background: var(--input-bg);
@@ -280,7 +285,7 @@ body {
 #chat-input {
   flex: 1;
   padding: 10px 14px;
-  font-family: "Doto", sans-serif;
+  font-family: var(--font);
   font-size: 13px;
   font-weight: 400;
   background: var(--input-bg);
@@ -382,7 +387,7 @@ body {
 .settings-tab {
   flex: 1;
   padding: 8px 12px;
-  font-family: "Doto", sans-serif;
+  font-family: var(--font);
   font-size: 10px;
   font-weight: 700;
   letter-spacing: 0.08em;
@@ -440,7 +445,7 @@ body {
 #system-prompt {
   width: 100%;
   padding: 10px 14px;
-  font-family: "Doto", sans-serif;
+  font-family: var(--font);
   font-size: 12px;
   font-weight: 400;
   background: var(--input-bg);
@@ -462,7 +467,7 @@ body {
   align-items: center;
   justify-content: center;
   padding: 6px 16px;
-  font-family: "Doto", sans-serif;
+  font-family: var(--font);
   font-size: 11px;
   font-weight: 600;
   letter-spacing: 0.05em;
@@ -483,6 +488,45 @@ body {
 .btn-danger:hover {
   border-color: var(--accent);
   color: var(--accent);
+}
+
+/* --- font selector --- */
+
+.font-selector {
+  display: flex;
+  gap: 0;
+  border: 1px solid var(--border);
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+.font-option {
+  flex: 1;
+  padding: 8px 12px;
+  font-family: var(--font);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  background: transparent;
+  color: var(--fg-secondary);
+  border: none;
+  border-right: 1px solid var(--border);
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.font-option:last-child {
+  border-right: none;
+}
+
+.font-option:hover {
+  color: var(--fg);
+  background: var(--bg-secondary);
+}
+
+.font-option.active {
+  color: var(--accent);
+  background: var(--bg-secondary);
 }
 
 .avatar-actions {
@@ -570,7 +614,7 @@ body {
 .setting-input {
   width: 100%;
   padding: 8px 12px;
-  font-family: "Doto", sans-serif;
+  font-family: var(--font);
   font-size: 12px;
   font-weight: 400;
   background: var(--input-bg);

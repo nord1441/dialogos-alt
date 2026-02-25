@@ -163,6 +163,22 @@ describe("API endpoints", () => {
       const res = await request(app).get("/api/settings");
       expect(res.body.enabledModels).toEqual(models);
     });
+
+    // デフォルトのフォント設定（doto）が返されるか確認
+    it("should return default font as doto when not set", async () => {
+      const res = await request(app).get("/api/settings");
+      expect(res.body.font).toBe("doto");
+    });
+
+    // DBに保存されたフォント設定が返されるか確認
+    it("should return saved font setting", async () => {
+      db.prepare("INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)").run(
+        "font",
+        "helvetica"
+      );
+      const res = await request(app).get("/api/settings");
+      expect(res.body.font).toBe("helvetica");
+    });
   });
 
   // ========================================
@@ -224,6 +240,60 @@ describe("API endpoints", () => {
         value: string;
       };
       expect(row.value).toBe("あなたは親切なアシスタントです。");
+    });
+  });
+
+  // ========================================
+  // POST /api/settings/font - フォント設定
+  // ========================================
+  describe("POST /api/settings/font", () => {
+    // 有効なフォント名（doto）で保存できるか確認
+    it("should save font setting as doto", async () => {
+      const res = await request(app)
+        .post("/api/settings/font")
+        .send({ font: "doto" });
+      expect(res.status).toBe(200);
+      expect(res.body.ok).toBe(true);
+
+      const row = db.prepare("SELECT value FROM settings WHERE key = ?").get("font") as { value: string };
+      expect(row.value).toBe("doto");
+    });
+
+    // 有効なフォント名（helvetica）で保存できるか確認
+    it("should save font setting as helvetica", async () => {
+      const res = await request(app)
+        .post("/api/settings/font")
+        .send({ font: "helvetica" });
+      expect(res.status).toBe(200);
+      expect(res.body.ok).toBe(true);
+
+      const row = db.prepare("SELECT value FROM settings WHERE key = ?").get("font") as { value: string };
+      expect(row.value).toBe("helvetica");
+    });
+
+    // 無効なフォント名が400エラーになるか確認
+    it("should reject invalid font name with 400", async () => {
+      const res = await request(app)
+        .post("/api/settings/font")
+        .send({ font: "comic-sans" });
+      expect(res.status).toBe(400);
+      expect(res.body.error).toContain("Invalid font");
+    });
+
+    // fontフィールドが文字列以外の場合に400エラーになるか確認
+    it("should reject non-string font with 400", async () => {
+      const res = await request(app)
+        .post("/api/settings/font")
+        .send({ font: 123 });
+      expect(res.status).toBe(400);
+    });
+
+    // fontフィールドが未指定の場合に400エラーになるか確認
+    it("should reject missing font field with 400", async () => {
+      const res = await request(app)
+        .post("/api/settings/font")
+        .send({});
+      expect(res.status).toBe(400);
     });
   });
 

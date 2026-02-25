@@ -95,13 +95,28 @@ export function createApp(options?: { dataDir?: string }) {
       };
     }
 
+    const font = getSetting("font");
+
     res.json({
       systemPrompt: systemPrompt || "You are a helpful assistant.",
       avatarUrl,
       activeModel: activeModel ? JSON.parse(activeModel) : { provider: "anthropic", model: "claude-opus-4-6" },
       enabledModels: enabledModels ? JSON.parse(enabledModels) : [],
       providers,
+      font: font || "doto",
     });
+  });
+
+  // Update font
+  app.post("/api/settings/font", (req: Request, res: Response) => {
+    const { font } = req.body;
+    const VALID_FONTS = ["doto", "helvetica"];
+    if (typeof font !== "string" || !VALID_FONTS.includes(font)) {
+      res.status(400).json({ error: "Invalid font. Must be one of: " + VALID_FONTS.join(", ") });
+      return;
+    }
+    setSetting("font", font);
+    res.json({ ok: true });
   });
 
   // Update system prompt
