@@ -174,10 +174,10 @@ describe("API endpoints", () => {
     it("should return saved font setting", async () => {
       db.prepare("INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)").run(
         "font",
-        "helvetica"
+        "bebas"
       );
       const res = await request(app).get("/api/settings");
-      expect(res.body.font).toBe("helvetica");
+      expect(res.body.font).toBe("bebas");
     });
   });
 
@@ -263,12 +263,12 @@ describe("API endpoints", () => {
     it("should save font setting as helvetica", async () => {
       const res = await request(app)
         .post("/api/settings/font")
-        .send({ font: "helvetica" });
+        .send({ font: "bebas" });
       expect(res.status).toBe(200);
       expect(res.body.ok).toBe(true);
 
       const row = db.prepare("SELECT value FROM settings WHERE key = ?").get("font") as { value: string };
-      expect(row.value).toBe("helvetica");
+      expect(row.value).toBe("bebas");
     });
 
     // 無効なフォント名が400エラーになるか確認

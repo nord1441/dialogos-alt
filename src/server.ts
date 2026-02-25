@@ -110,7 +110,7 @@ export function createApp(options?: { dataDir?: string }) {
   // Update font
   app.post("/api/settings/font", (req: Request, res: Response) => {
     const { font } = req.body;
-    const VALID_FONTS = ["doto", "helvetica"];
+    const VALID_FONTS = ["doto", "bebas"];
     if (typeof font !== "string" || !VALID_FONTS.includes(font)) {
       res.status(400).json({ error: "Invalid font. Must be one of: " + VALID_FONTS.join(", ") });
       return;

@@ -35,8 +35,8 @@
   --shadow: rgba(0, 0, 0, 0.3);
 }
 
-[data-font="helvetica"] {
-  --font: "Helvetica Ultra Compressed", "Helvetica Neue Condensed", "Helvetica Neue", "Helvetica", "Arial Narrow", sans-serif;
+[data-font="bebas"] {
+  --font: "Bebas Neue", sans-serif;
 }
 
 html, body {
